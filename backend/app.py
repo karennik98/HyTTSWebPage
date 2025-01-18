@@ -5,10 +5,12 @@ import os
 import tempfile
 import base64
 from tts_helper import TTSHelper
-from model_loader import ensure_model_files
+import uvicorn
+import logging
 
-# Download model files on startup
-ensure_model_files()
+# Set up logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
 
 app = FastAPI()
 
@@ -21,18 +23,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Model paths
-MODEL_PATH = "model/best_model.pth"
-CONFIG_PATH = "model/config.json"
-SPEAKERS_FILE = "model/speakers.pth"
+try:
+    logger.info("Initializing TTS Helper...")
+    # Model paths
+    MODEL_PATH = os.path.join("model", "best_model.pth")
+    CONFIG_PATH = os.path.join("model", "config.json")
+    SPEAKERS_FILE = os.path.join("model", "speakers.pth")
 
-# Initialize TTS Helper
-tts_helper = TTSHelper(
-    model_path=MODEL_PATH,
-    config_path=CONFIG_PATH,
-    speakers_file=SPEAKERS_FILE,
-    use_cuda=False
-)
+    # Initialize TTS Helper
+    tts_helper = TTSHelper(
+        model_path=MODEL_PATH,
+        config_path=CONFIG_PATH,
+        speakers_file=SPEAKERS_FILE,
+        use_cuda=False
+    )
+    logger.info("TTS Helper initialized successfully!")
+except Exception as e:
+    logger.error(f"Error initializing TTS Helper: {str(e)}")
+    raise
 
 class TTSRequest(BaseModel):
     text: str
@@ -47,6 +55,7 @@ SPEAKER_MAPPING = {
 @app.post("/api/synthesize")
 async def synthesize(request: TTSRequest):
     try:
+        logger.info(f"Received synthesis request for speaker: {request.speaker_name}")
         speaker_idx = SPEAKER_MAPPING.get(request.speaker_name)
         if speaker_idx is None:
             raise HTTPException(
@@ -77,8 +86,17 @@ async def synthesize(request: TTSRequest):
             }
             
     except Exception as e:
+        logger.error(f"Error in synthesis: {str(e)}")
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/api/speakers")
 async def get_speakers():
     return {"speakers": list(SPEAKER_MAPPING.keys())}
+
+@app.get("/health")
+async def health_check():
+    return {"status": "healthy"}
+
+if __name__ == "__main__":
+    logger.info("Starting server...")
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
