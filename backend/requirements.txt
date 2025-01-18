@@ -1,9 +1,15 @@
-fastapi==0.104.1
-uvicorn==0.24.0
-python-multipart
+# fastapi==0.104.1
+# uvicorn==0.24.0
+# python-multipart
+# TTS==0.21.1
+# numpy
+# torch
+# requests
+# python-dotenv
+# gdown
+
+gradio>=4.0.0
 TTS==0.21.1
-numpy
 torch
-requests
-python-dotenv
+numpy
 gdown

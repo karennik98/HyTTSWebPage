@@ -1,106 +1,142 @@
-from fastapi import FastAPI, HTTPException
-from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+import gradio as gr
+from TTS.utils.synthesizer import Synthesizer
 import os
-import tempfile
-import base64
-from tts_helper import TTSHelper
-import uvicorn
-import logging
+import warnings
+import shutil
+import model_loader
 
-from model_loader import ensure_model_files
+# Suppress warnings
+warnings.filterwarnings("ignore")
 
-# Set up logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
+# Debug function to check file contents
+def debug_file_contents(filepath):
+    try:
+        with open(filepath, 'r') as f:
+            content = f.read()
+        print(f"\nContents of {filepath}:")
+        print(content)
+        return True
+    except Exception as e:
+        print(f"Error reading {filepath}: {str(e)}")
+        return False
 
-ensure_model_files()
-
-app = FastAPI()
-
-# Add CORS middleware
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
+# Replace cleaners
+print("\nInstalling Armenian cleaners...")
 try:
-    logger.info("Initializing TTS Helper...")
-    # Model paths
-    MODEL_PATH = os.path.join("model", "best_model.pth")
-    CONFIG_PATH = os.path.join("model", "config.json")
-    SPEAKERS_FILE = os.path.join("model", "speakers.pth")
-
-    # Initialize TTS Helper
-    tts_helper = TTSHelper(
-        model_path=MODEL_PATH,
-        config_path=CONFIG_PATH,
-        speakers_file=SPEAKERS_FILE,
-        use_cuda=False
-    )
-    logger.info("TTS Helper initialized successfully!")
+    import TTS
+    tts_path = TTS.__path__[0]
+    cleaner_dest = os.path.join(tts_path, "tts", "utils", "text", "cleaners.py")
+    
+    # Debug: Print paths
+    print(f"Source cleaner path: armenian_cleaners.py")
+    print(f"Destination cleaner path: {cleaner_dest}")
+    
+    # Debug: Check if source exists
+    if not os.path.exists("armenian_cleaners.py"):
+        print("ERROR: armenian_cleaners.py not found!")
+    else:
+        print("Source cleaner file exists")
+        
+    # Copy the file
+    shutil.copy("armenian_cleaners.py", cleaner_dest)
+    print("Cleaner file copied successfully")
+    
+    # Verify the copy
+    if debug_file_contents(cleaner_dest):
+        print("Cleaner file contents verified")
+    
+    # Reload the cleaners module
+    import importlib
+    import TTS.tts.utils.text.cleaners as cleaners
+    importlib.reload(cleaners)
+    
+    # Verify armenian_cleaners exists
+    if hasattr(cleaners, 'armenian_cleaners'):
+        print("armenian_cleaners function found in module")
+    else:
+        print("ERROR: armenian_cleaners function not found in module!")
+        
 except Exception as e:
-    logger.error(f"Error initializing TTS Helper: {str(e)}")
+    print(f"Error installing cleaners: {str(e)}")
     raise
 
-class TTSRequest(BaseModel):
-    text: str
-    speaker_name: str
+# Download model files if they don't exist
+print("Checking model files...")
 
-# Speaker mapping
-SPEAKER_MAPPING = {
-    'aram': 0,
-    'narek': 1
-}
 
-@app.post("/api/synthesize")
-async def synthesize(request: TTSRequest):
+model_loader.ensure_model_files()
+
+# Initialize model
+try:
+    synthesizer = Synthesizer(
+        tts_checkpoint="model/best_model.pth",
+        tts_config_path="model/config.json",
+        tts_speakers_file="model/speakers.pth",
+        use_cuda=False
+    )
+    print("Model loaded successfully!")
+except Exception as e:
+    print(f"Error loading model: {str(e)}")
+    raise
+
+def text_to_speech(text, speaker):
     try:
-        logger.info(f"Received synthesis request for speaker: {request.speaker_name}")
-        speaker_idx = SPEAKER_MAPPING.get(request.speaker_name)
-        if speaker_idx is None:
-            raise HTTPException(
-                status_code=400, 
-                detail=f"Invalid speaker. Available speakers: {list(SPEAKER_MAPPING.keys())}"
-            )
-
-        # Create temporary file
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp_file:
-            # Generate and save audio
-            wav = tts_helper.generate_speech(
-                text=request.text,
-                speaker_name=request.speaker_name,
-                speaker_idx=speaker_idx
-            )
-            tts_helper.save_audio(wav, tmp_file.name)
-            
-            # Read and encode audio
-            with open(tmp_file.name, "rb") as audio_file:
-                audio_data = base64.b64encode(audio_file.read()).decode()
-            
-            # Clean up
-            os.unlink(tmp_file.name)
-            
-            return {
-                "success": True,
-                "audio": audio_data
-            }
-            
+        # Map speaker names to indices
+        speaker_mapping = {
+            'aram': 0,
+            'narek': 1
+        }
+        speaker_idx = speaker_mapping[speaker]
+        
+        # Generate speech
+        wav = synthesizer.tts(
+            text=text,
+            speaker_name=speaker,
+            speaker_id=speaker_idx,
+            noise_scale=0.3,
+            length_scale=1.0,
+            noise_scale_dp=0.3
+        )
+        
+        # Create temporary file path
+        output_path = "output.wav"
+        synthesizer.save_wav(wav, output_path)
+        
+        return output_path
+        
     except Exception as e:
-        logger.error(f"Error in synthesis: {str(e)}")
-        raise HTTPException(status_code=500, detail=str(e))
+        raise gr.Error(f"Error generating speech: {str(e)}")
 
-@app.get("/api/speakers")
-async def get_speakers():
-    return {"speakers": list(SPEAKER_MAPPING.keys())}
-
-@app.get("/health")
-async def health_check():
-    return {"status": "healthy"}
+# Create Gradio interface
+demo = gr.Interface(
+    fn=text_to_speech,
+    inputs=[
+        gr.Textbox(
+            label="Armenian Text", 
+            placeholder="Մուտքագրեք հայերեն տեքստ...",
+            lines=3
+        ),
+        gr.Dropdown(
+            choices=["aram", "narek"], 
+            label="Speaker",
+            value="aram"
+        )
+    ],
+    outputs=gr.Audio(label="Generated Speech"),
+    title="Armenian Text-to-Speech",
+    description="Convert Armenian text to speech using multiple speakers.",
+    examples=[
+        ["Բարև, ինչպես ես?", "aram"],
+        ["Իմ անունը Կարեն է:", "narek"],
+        ["Ես սիրում եմ երաժշտություն:", "aram"],
+    ]
+)
 
 if __name__ == "__main__":
-    logger.info("Starting server...")
-    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")
+    # Launch with public access and additional configurations
+    demo.launch(
+        share=True,  # This makes it public
+        server_name="0.0.0.0",  # Allows external access
+        server_port=7860,  # Default port
+        show_error=True  # Shows detailed error messages
+    )
