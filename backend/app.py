@@ -8,9 +8,13 @@ from tts_helper import TTSHelper
 import uvicorn
 import logging
 
+from model_loader import ensure_model_files
+
 # Set up logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+
+ensure_model_files()
 
 app = FastAPI()
 
