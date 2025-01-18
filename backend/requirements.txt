@@ -4,3 +4,6 @@ python-multipart
 TTS==0.21.1
 numpy
 torch
+requests
+python-dotenv
+gdown
