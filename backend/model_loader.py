@@ -10,7 +10,7 @@ def download_model_files():
     # Replace these with your Google Drive file IDs
     files = {
         'best_model.pth': '1bfdc4_-QS5IKw05LVXfAleKeEw7k6QaG',
-        'config.json': '1_BMgheHZ5lQoKKIYopz8y48_rtLTm3o_',
+        'config.json': '1yprwl5nGo-JMNqIS-NSlCTLyfgj-X6xD',
         'speakers.pth': '1ki2nlguHSHMYcSYV8SA1c8gWr05FPiju'
     }
     
