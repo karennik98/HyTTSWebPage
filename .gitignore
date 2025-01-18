@@ -1,0 +1,5 @@
+backend/model/
+backend/hy_web/
+frontend/node_modules/
+__pycache__/
+*.pyc
