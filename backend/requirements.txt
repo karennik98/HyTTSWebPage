@@ -7,3 +7,5 @@ torch
 requests
 python-dotenv
 gdown
+onnxruntime==1.15.1
+soundfile==0.12.1
