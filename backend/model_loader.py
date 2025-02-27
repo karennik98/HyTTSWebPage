@@ -9,9 +9,10 @@ def download_model_files():
     
     # Replace these with your Google Drive file IDs
     files = {
-        'best_model.pth': '1bfdc4_-QS5IKw05LVXfAleKeEw7k6QaG',
+        #'best_model.pth': '1bfdc4_-QS5IKw05LVXfAleKeEw7k6QaG',
         'config.json': '1yprwl5nGo-JMNqIS-NSlCTLyfgj-X6xD',
-        'speakers.pth': '1ki2nlguHSHMYcSYV8SA1c8gWr05FPiju'
+        'speakers.pth': '1ki2nlguHSHMYcSYV8SA1c8gWr05FPiju',
+        'model.onnx': '1HxbPBjhg2AXF702d0DmRIL9aiGrO_7yJ'
     }
     
     for filename, file_id in files.items():
@@ -22,7 +23,7 @@ def download_model_files():
 
 def ensure_model_files():
     """Ensure all model files are present"""
-    required_files = ['best_model.pth', 'config.json', 'speakers.pth']
+    required_files = ['model.onnx', 'config.json', 'speakers.pth']
     model_dir = Path("model")
     
     # Check if all files exist locally

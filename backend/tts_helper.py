@@ -22,6 +22,7 @@ class TTSHelper:
             return wav
         except Exception as e:
             raise Exception(f"Speech generation failed: {str(e)}")
+        
             
     def save_audio(self, wav, output_path):
         """

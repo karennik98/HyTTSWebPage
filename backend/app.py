@@ -4,7 +4,7 @@ from pydantic import BaseModel
 import os
 import tempfile
 import base64
-from tts_helper import TTSHelper
+from onnx_tts_helper import ONNXTTSHelper  # Changed import
 import uvicorn
 import logging
 
@@ -28,22 +28,22 @@ app.add_middleware(
 )
 
 try:
-    logger.info("Initializing TTS Helper...")
+    logger.info("Initializing ONNX TTS Helper...")
     # Model paths
-    MODEL_PATH = os.path.join("model", "best_model.pth")
+    MODEL_PATH = os.path.join("model", "model.onnx")  # Changed to ONNX model path
     CONFIG_PATH = os.path.join("model", "config.json")
-    SPEAKERS_FILE = os.path.join("model", "speakers.pth")
+    SPEAKERS_FILE = os.path.join("model", "speakers.pth")  # Kept for compatibility
 
-    # Initialize TTS Helper
-    tts_helper = TTSHelper(
+    # Initialize ONNX TTS Helper
+    tts_helper = ONNXTTSHelper(
         model_path=MODEL_PATH,
         config_path=CONFIG_PATH,
         speakers_file=SPEAKERS_FILE,
         use_cuda=False
     )
-    logger.info("TTS Helper initialized successfully!")
+    logger.info("ONNX TTS Helper initialized successfully!")
 except Exception as e:
-    logger.error(f"Error initializing TTS Helper: {str(e)}")
+    logger.error(f"Error initializing ONNX TTS Helper: {str(e)}")
     raise
 
 class TTSRequest(BaseModel):
