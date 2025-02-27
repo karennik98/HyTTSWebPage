@@ -46,9 +46,7 @@ class ONNXTTSHelper:
         # Set execution mode to sequential
         session_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
         
-        # Memory optimizations specific to reducing memory footprint
-        # Set memory limits to encourage more conservative memory usage
-        session_options.set_session_log_severity_level(3)  # Reduce logging
+        # REMOVED: session_options.set_session_log_severity_level(3)  # This line was causing the error
         
         # Load ONNX model with optimized session options
         logger.info(f"Loading ONNX model from {model_path} with memory optimizations...")
