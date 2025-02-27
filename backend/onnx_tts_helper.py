@@ -28,12 +28,42 @@ class ONNXTTSHelper:
         logger.info("Initializing tokenizer...")
         self.tokenizer = TTSTokenizer.init_from_config(self.config)[0]
 
-        # Load ONNX model
-        logger.info(f"Loading ONNX model from {model_path}...")
+        # Configure session options for memory optimization
+        logger.info("Setting up optimized session options...")
+        session_options = ort.SessionOptions()
+        
+        # Memory optimizations
+        session_options.enable_mem_pattern = False
+        session_options.enable_cpu_mem_arena = False
+        
+        # Reduce threads to lower memory usage
+        session_options.intra_op_num_threads = 1
+        session_options.inter_op_num_threads = 1
+        
+        # Graph optimizations
+        session_options.graph_optimization_level = ort.GraphOptimizationLevel.ORT_ENABLE_ALL
+        
+        # Set execution mode to sequential
+        session_options.execution_mode = ort.ExecutionMode.ORT_SEQUENTIAL
+        
+        # Memory optimizations specific to reducing memory footprint
+        # Set memory limits to encourage more conservative memory usage
+        session_options.set_session_log_severity_level(3)  # Reduce logging
+        
+        # Load ONNX model with optimized session options
+        logger.info(f"Loading ONNX model from {model_path} with memory optimizations...")
         providers = ['CUDAExecutionProvider', 'CPUExecutionProvider'] if use_cuda else ['CPUExecutionProvider']
+        
+        # Set provider options for more memory-efficient operation
+        provider_options = [{}]
+        if not use_cuda:
+            provider_options = [{'arena_extend_strategy': 'kSameAsRequested'}]
+        
         self.session = ort.InferenceSession(
             model_path,
-            providers=providers
+            sess_options=session_options,
+            providers=providers,
+            provider_options=provider_options
         )
         
         logger.info(f"ONNX model loaded. Inputs: {[input.name for input in self.session.get_inputs()]}")
