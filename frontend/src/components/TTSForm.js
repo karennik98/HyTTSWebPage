@@ -116,6 +116,12 @@ const TTSForm = () => {
     return audio;
   };
 
+  // Display name mapping
+  const speakerDisplayNames = {
+    'aram': 'Gor',
+    'narek': 'Narek'  // Keep this the same or change as needed
+  };
+
   // State variables
   const [text, setText] = useState('');
   const [speaker, setSpeaker] = useState('');
@@ -169,6 +175,7 @@ const TTSForm = () => {
   const generateSpeech = async (textToConvert) => {
     setLoading(true);
     setError('');
+    
     try {
       const response = await axios.post(`${API_BASE_URL}/api/synthesize`, {
         text: textToConvert,
@@ -331,7 +338,7 @@ const TTSForm = () => {
               >
                 {speakers.map((name) => (
                   <MenuItem key={name} value={name}>
-                    {name.charAt(0).toUpperCase() + name.slice(1)}
+                    {speakerDisplayNames[name] || name}
                   </MenuItem>
                 ))}
               </Select>
@@ -459,7 +466,7 @@ const TTSForm = () => {
                 >
                   {speakers.map((name) => (
                     <MenuItem key={name} value={name}>
-                      {name.charAt(0).toUpperCase() + name.slice(1)}
+                      {speakerDisplayNames[name] || name}
                     </MenuItem>
                   ))}
                 </Select>
@@ -501,7 +508,7 @@ const TTSForm = () => {
                         {item.date}
                       </Typography>
                       <Chip 
-                        label={item.speaker.charAt(0).toUpperCase() + item.speaker.slice(1)} 
+                        label={speakerDisplayNames[item.speaker] || item.speaker} 
                         size="small" 
                         color="primary" 
                         variant="outlined"
